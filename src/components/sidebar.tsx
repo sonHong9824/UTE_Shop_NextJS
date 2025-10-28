@@ -1,6 +1,6 @@
 "use client";
 import {
-  LayoutDashboard, Users, ShoppingCart, Package, Star, Gift, Bell, Settings, 
+  LayoutDashboard, Users, ShoppingCart, Package, Star, Gift, Bell, Settings,
   User, LogOut, ChevronRight, Menu, Search, X
 } from "lucide-react";
 import Link from "next/link";
@@ -8,53 +8,7 @@ import { usePathname } from "next/navigation";
 import Image from "next/image";
 import { useEffect, useState, Dispatch, SetStateAction } from "react";
 import { cn } from "@/lib/utils";
-
-const menuItems = [
-  { 
-    name: "Tổng quan", 
-    icon: LayoutDashboard, 
-    path: "/", 
-    badge: { count: 3, color: "bg-blue-500" } 
-  },
-  { 
-    name: "Người dùng", 
-    icon: Users, 
-    path: "/user" 
-  },
-  { 
-    name: "Đơn hàng", 
-    icon: ShoppingCart, 
-    path: "/order", 
-    badge: { count: 12, color: "bg-amber-500" } 
-  },
-  { 
-    name: "Sản phẩm", 
-    icon: Package, 
-    path: "/product" 
-  },
-  { 
-    name: "Đánh giá", 
-    icon: Star, 
-    path: "/comment",
-    badge: { count: 5, color: "bg-rose-500" }
-  },
-  { 
-    name: "Khuyến mãi", 
-    icon: Gift, 
-    path: "/voucher" 
-  },
-  { 
-    name: "Thông báo", 
-    icon: Bell, 
-    path: "/notify", 
-    badge: { count: 8, color: "bg-purple-500" } 
-  },
-  { 
-    name: "Cài đặt", 
-    icon: Settings, 
-    path: "/setting" 
-  },
-];
+import { useStatsContext } from "@/contexts/StatsContext";
 
 interface SidebarProps {
   collapsed: boolean;
@@ -64,6 +18,55 @@ interface SidebarProps {
 export default function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
   const pathname = usePathname();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const { stats, loading, error } = useStatsContext();
+
+  const menuItems = [
+    {
+      name: "Tổng quan",
+      icon: LayoutDashboard,
+      path: "/",
+      badge: { count: 3, color: "bg-blue-500" }
+    },
+    {
+      name: "Người dùng",
+      icon: Users,
+      path: "/user"
+    },
+    {
+      name: "Đơn hàng",
+      icon: ShoppingCart,
+      path: "/order",
+      badge: { count: stats.pendingOrders, color: "bg-amber-500" }
+    },
+    {
+      name: "Sản phẩm",
+      icon: Package,
+      path: "/product"
+    },
+    {
+      name: "Đánh giá",
+      icon: Star,
+      path: "/comment",
+      badge: { count: stats.pendingComments, color: "bg-rose-500" }
+    },
+    {
+      name: "Khuyến mãi",
+      icon: Gift,
+      path: "/voucher",
+      badge: { count: stats.activeVouchers, color: "bg-green-500" }
+    },
+    {
+      name: "Thông báo",
+      icon: Bell,
+      path: "/notify",
+      badge: { count: stats.notifications, color: "bg-purple-500" }
+    },
+    {
+      name: "Cài đặt",
+      icon: Settings,
+      path: "/setting"
+    },
+  ];
 
   return (
     <>
@@ -118,11 +121,11 @@ export default function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
               onClick={() => setCollapsed(!collapsed)}
               className="hidden lg:flex p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 transition-colors"
             >
-              <ChevronRight 
+              <ChevronRight
                 className={cn(
-                  "w-5 h-5 transition-transform duration-300", 
+                  "w-5 h-5 transition-transform duration-300",
                   collapsed ? "rotate-180" : ""
-                )} 
+                )}
               />
             </button>
           </div>
@@ -137,8 +140,14 @@ export default function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
                 <p className="text-lg font-bold text-blue-700 dark:text-blue-300">$12.5K</p>
               </div>
               <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-3 border border-green-100 dark:border-green-800">
-                <p className="text-xs text-green-600 dark:text-green-400 font-medium">Đơn hàng</p>
-                <p className="text-lg font-bold text-green-700 dark:text-green-300">156</p>
+                <p className="text-xs text-green-600 dark:text-green-400 font-medium">Voucher</p>
+                <p className="text-lg font-bold text-green-700 dark:text-green-300">
+                  {loading ? (
+                    <span className="animate-pulse">...</span>
+                  ) : (
+                    `${stats.activeVouchers}/${stats.totalVouchers}`
+                  )}
+                </p>
               </div>
             </div>
           </div>
@@ -187,11 +196,12 @@ export default function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
                       </span>
                     </div>
 
-                    {item.badge && (
+                    {item.badge && item.badge.count > 0 && (
                       <span
                         className={cn(
-                          "px-2 py-1 rounded-full flex items-center justify-center text-xs font-bold text-white relative z-10 shadow-lg",
-                          isActive ? "bg-white/20" : item.badge.color
+                          "px-2 py-1 rounded-full flex items-center justify-center text-xs font-bold text-white relative z-10 shadow-lg transition-all duration-300",
+                          isActive ? "bg-white/20" : item.badge.color,
+                          loading && item.name === "Khuyến mãi" && "animate-pulse"
                         )}
                       >
                         {item.badge.count}
@@ -200,11 +210,12 @@ export default function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
                   </>
                 )}
 
-                {collapsed && item.badge && (
+                {collapsed && item.badge && item.badge.count > 0 && (
                   <span
                     className={cn(
-                      "absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-lg",
-                      item.badge.color
+                      "absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-lg transition-all duration-300",
+                      item.badge.color,
+                      loading && item.name === "Khuyến mãi" && "animate-pulse"
                     )}
                   >
                     {item.badge.count}
